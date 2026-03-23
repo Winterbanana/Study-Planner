@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="hero hero-student quiz-hero">
+  <h1>{{ quiz.title }}</h1>
+  <p>{{ quiz.course_name }} | Timer: {{ quiz.time_limit_minutes }} minutes | Status: {{ quiz.quiz_status }}{% if quiz.scheduled_at %} | Real-Time: {{ quiz.scheduled_at }}{% endif %}</p>
+  <div class="hero-actions">
+    <a class="btn" href="/dashboard#quizzes">Back to Dashboard</a>
+    <span class="timer-chip" id="quizTimerChip" data-quiz-timer data-minutes="{{ quiz.time_limit_minutes }}">Time left: --:--</span>
+  </div>
+</section>
+
+<section class="quiz-grid">
+  <article class="panel">
+    <h2>Take Quiz</h2>
+
+    {% if result %}
+      {# --- Completion result state --- #}
+      <div class="quiz-result-state">
+        <div class="quiz-result-icon">&#10003;</div>
+        <h3>Quiz Complete!</h3>
+        <p class="quiz-attempt-meta">Final submission recorded</p>
+        <p class="quiz-result-score">{{ result_score }} / {{ result_total }}</p>
+        <p class="quiz-result-label">
+          {% if result_score == result_total %}Perfect score!
+          {% elif result_score >= (result_total // 2 + result_total % 2) %}Good job, keep it up!
+          {% else %}Keep practicing!{% endif %}
+        </p>
+        <span class="quiz-points-badge">+{{ result_points }} pts earned</span>
+        <div class="quiz-result-actions">
+          <p class="quiz-no-more">This quiz is now locked and cannot be opened again.</p>
+          <a href="/dashboard#quizzes" class="btn btn-primary">Back to Dashboard</a>
+        </div>
+      </div>
+
+    {% elif attempt_count >= 1 %}
+      {# --- Max attempts reached --- #}
+      <div class="quiz-start-state">
+        <div class="quiz-result-icon" style="background:#fde2e2;border-color:#e09090;color:#8f2d2d;">&#10005;</div>
+        <p class="quiz-start-hint quiz-no-more">This quiz has already been submitted and is locked.</p>
+        <a href="/dashboard#quizzes" class="btn btn-primary">Back to Dashboard</a>
+      </div>
+
+    {% elif questions %}
+      {# --- Pre-start state --- #}
+      <div class="quiz-start-state" id="quiz-start-state">
+        <p class="quiz-start-hint">
+          <strong>{{ questions|length }}</strong> question{{ 's' if questions|length != 1 else '' }}
+          &middot; One submission only &middot; Worth <strong>100 pts</strong> if completed.
+        </p>
+        <p class="quiz-start-sub">Questions are shuffled each attempt. Timer starts on click.</p>
+        <button type="button" class="btn btn-primary" data-quiz-start>Start Quiz</button>
+      </div>
+
+      {# --- Active quiz form (hidden until started) --- #}
+      <form method="POST" action="/quizzes/{{ quiz.id }}/submit" data-quiz-form class="quiz-take-form" style="display:none">
+        {% for q in questions %}
+          <article class="quiz-question">
+            <h3>Q{{ loop.index }}. {{ q.question_text }}</h3>
+            <label><input type="radio" name="answer_{{ q.id }}" value="A"> A. {{ q.option_a }}</label>
+            <label><input type="radio" name="answer_{{ q.id }}" value="B"> B. {{ q.option_b }}</label>
+            <label><input type="radio" name="answer_{{ q.id }}" value="C"> C. {{ q.option_c }}</label>
+            <label><input type="radio" name="answer_{{ q.id }}" value="D"> D. {{ q.option_d }}</label>
+          </article>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Submit Quiz</button>
+      </form>
+
+    {% else %}
+      <p class="empty">No questions yet. Add questions from the panel on the right to get started.</p>
+    {% endif %}
+  </article>
+
+  <aside class="panel" data-add-question-panel>
+    <h2>
+      Add Question
+      <span class="question-count-badge">{{ questions|length }}/{{ max_quiz_questions }}</span>
+    </h2>
+
+    {% if questions|length < max_quiz_questions %}
+      <form method="POST" action="/quizzes/{{ quiz.id }}/questions/add" class="stack-form">
+        <label for="q_text">Question</label>
+        <input id="q_text" type="text" name="q_text" required>
+        <input type="text" name="q_a" placeholder="Option A" required>
+        <input type="text" name="q_b" placeholder="Option B" required>
+        <input type="text" name="q_c" placeholder="Option C" required>
+        <input type="text" name="q_d" placeholder="Option D" required>
+        <label for="q_correct">Correct</label>
+        <select id="q_correct" name="q_correct" required>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Add Question</button>
+      </form>
+    {% else %}
+      <p class="quiz-limit-notice">Maximum of {{ max_quiz_questions }} questions reached. Start the quiz when ready.</p>
+    {% endif %}
+
+    <div class="attempt-list">
+      <h3>Recent Attempts</h3>
+      {% for attempt in attempts %}
+        <p>
+          <span class="attempt-label">Attempt {{ attempt.attempt_number or 1 }}</span>
+          &middot; {{ attempt.score }}/{{ attempt.total_questions }}
+          <span class="attempt-points">(+{{ attempt.points_awarded or 0 }} pts)</span>
+          <br><span class="attempt-date">{{ attempt.submitted_at }}</span>
+        </p>
+      {% else %}
+        <p class="empty">No attempts yet.</p>
+      {% endfor %}
+    </div>
+  </aside>
+</section>
+{% endblock %}

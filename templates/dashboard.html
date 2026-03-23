@@ -1,0 +1,557 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="dash-main">
+  <section class="panel" id="overview">
+    <div class="section-head">
+      <h2 class="section-title"><span class="section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h8V3H3zM13 21h8v-6h-8zM13 3v8h8V3zM3 21h8v-6H3z"></path></svg></span>{{ dashboard_name }} Dashboard</h2>
+      <p>Clean, focused, and organized. Everything you need in one workspace.</p>
+    </div>
+
+    <div class="quick-actions">
+      <a class="btn" href="/dashboard">All</a>
+      <a class="btn" href="/dashboard?status=Pending">Pending</a>
+      <a class="btn" href="/dashboard?status=Completed">Completed</a>
+      <a class="btn btn-primary" href="#activities">New Activity</a>
+    </div>
+
+    <form method="GET" action="/dashboard" class="inline-form">
+      <select name="grouping">
+        <option value="">All Groupings</option>
+        {% for grouping in groupings %}
+          <option value="{{ grouping.id }}" {% if grouping_filter == grouping.id %}selected{% endif %}>{{ grouping.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="status">
+        <option value="">Any Status</option>
+        <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+        <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed</option>
+      </select>
+      <button class="btn" type="submit">Apply Filter</button>
+    </form>
+
+    <div class="metrics-grid notion-metrics">
+      <article class="metric-card">
+        <h3>Total Activities</h3>
+        <p>{{ total_activities }}</p>
+      </article>
+      <article class="metric-card">
+        <h3>Pending</h3>
+        <p>{{ pending_count }}</p>
+      </article>
+      <article class="metric-card">
+        <h3>Completed</h3>
+        <p>{{ completed_count }}</p>
+      </article>
+      <article class="metric-card points-card">
+        <h3>Points Earned</h3>
+        <p>{{ total_points }}</p>
+      </article>
+    </div>
+
+    <article class="priority-legend-card">
+      <h3>Priority Legend</h3>
+      <p>Use these color meanings when planning your workload.</p>
+      <div class="legend-row">
+        <span class="priority-badge priority-low">Low Priority</span>
+        <span class="priority-badge priority-medium">Medium Priority</span>
+        <span class="priority-badge priority-high">High Priority</span>
+      </div>
+    </article>
+
+    <div class="assignment-cards">
+      {% for item in overview_records %}
+        <article class="assignment-card activity-summary-card">
+          <header>
+            <h3>{{ item.title }}</h3>
+            <span class="status status-{{ item.status_class }}">{{ item.status_label }}</span>
+          </header>
+
+          {% if item.kind == 'activity' %}
+            <p class="meta-line"><strong>Type:</strong> Activity</p>
+            <p class="meta-line"><strong>Course:</strong> {{ item.course_name }}</p>
+            <p class="meta-line"><strong>Student Status:</strong> {{ item.student_status }}</p>
+            <p class="meta-line"><span class="priority-badge priority-{{ item.priority|lower }}">{{ item.priority }} Priority</span></p>
+            <p class="meta-line"><strong>Due:</strong> {{ item.due_at }}</p>
+          {% elif item.kind == 'course' %}
+            <p class="meta-line"><strong>Type:</strong> Course Card</p>
+            <p class="meta-line"><strong>Code:</strong> {{ item.course_code }}</p>
+            <p class="meta-line"><strong>Instructor:</strong> {{ item.instructor_name }}</p>
+            <p class="meta-line"><span class="priority-badge priority-{{ item.priority|lower }}">{{ item.priority }} Priority</span></p>
+          {% elif item.kind == 'quiz' %}
+            <p class="meta-line"><strong>Type:</strong> Quiz</p>
+            <p class="meta-line"><strong>Course:</strong> {{ item.course_name }}</p>
+            {% if item.last_score is not none and item.last_total is not none %}
+              <p class="meta-line"><strong>Last Score:</strong> {{ item.last_score }}/{{ item.last_total }}</p>
+            {% else %}
+              <p class="meta-line"><strong>Last Score:</strong> Not attempted yet</p>
+            {% endif %}
+            <p class="meta-line"><span class="priority-badge priority-{{ item.priority|lower }}">{{ item.priority }} Priority</span></p>
+          {% endif %}
+        </article>
+      {% else %}
+        <p class="empty">No records to show yet.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel" id="groupings">
+    <div class="section-head">
+      <h2 class="section-title"><span class="section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="7" rx="1"></rect><rect x="13" y="4" width="8" height="7" rx="1"></rect><rect x="3" y="13" width="8" height="7" rx="1"></rect><rect x="13" y="13" width="8" height="7" rx="1"></rect></svg></span>Groupings</h2>
+      <p>Create subject clusters and reuse them in courses.</p>
+    </div>
+    <form method="POST" action="/groupings/add" class="stack-form">
+      <div class="grouping-form-grid row g-2">
+        <div class="col-md-4">
+          <label for="grouping_name">Grouping Name</label>
+          <input id="grouping_name" type="text" name="grouping_name" placeholder="Core Subjects" required>
+        </div>
+        <div class="col-md-4">
+          <label for="grouping_color">Color</label>
+          <div class="color-choice-inline">
+            <span class="color-choice-text">Choose</span>
+            <input id="grouping_color" class="color-picker-input" type="color" name="grouping_color" value="#2d8f6f">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label for="grouping_priority">Priority</label>
+          <select id="grouping_priority" name="grouping_priority" required>
+            <option value="Low">Low Priority</option>
+            <option value="Medium" selected>Medium Priority</option>
+            <option value="High">High Priority</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label for="grouping_note">Note (Optional)</label>
+          <input id="grouping_note" type="text" name="grouping_note" placeholder="Main semester classes">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Grouping</button>
+    </form>
+
+    <div class="grouping-list">
+      {% for grouping in groupings %}
+        <article class="grouping-item">
+          <h3><span class="color-dot" style="--dot-color: {{ grouping.color or '#2d8f6f' }};"></span>{{ grouping.name }} <span class="priority-badge priority-{{ grouping.priority|lower }}">{{ grouping.priority }} Priority</span></h3>
+          <p>{{ grouping.note or 'No note yet.' }}</p>
+          <div class="actions">
+            <a href="/groupings/{{ grouping.id }}/edit">Edit</a>
+            <a href="/groupings/{{ grouping.id }}/delete" onclick="return confirm('Delete this grouping? Courses will be ungrouped.');">Delete</a>
+          </div>
+        </article>
+      {% else %}
+        <p class="empty">No groupings yet. Add your first grouping.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel" id="courses">
+    <div class="section-head">
+      <h2 class="section-title"><span class="section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16v12H4z"></path><path d="M4 10h16"></path></svg></span>Course Cards</h2>
+      <p>Visual cards for each course.</p>
+    </div>
+    <form method="POST" action="/courses/add" class="stack-form">
+      <div class="row g-2">
+        <div class="col-md-6">
+          <label for="course_name">Course Name</label>
+          <input id="course_name" type="text" name="course_name" placeholder="Programming 2" required>
+        </div>
+        <div class="col-md-6">
+          <label for="course_priority">Priority</label>
+          <select id="course_priority" name="course_priority" required>
+            <option value="Low">Low Priority</option>
+            <option value="Medium" selected>Medium Priority</option>
+            <option value="High">High Priority</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row g-2">
+        <div class="col-md-6">
+          <label for="course_code">Course Code (Optional)</label>
+          <input id="course_code" type="text" name="course_code" placeholder="CS102">
+        </div>
+        <div class="col-md-6">
+          <label for="instructor_name">Instructor (Optional)</label>
+          <input id="instructor_name" type="text" name="instructor_name" placeholder="Prof. Reyes">
+        </div>
+      </div>
+
+      <div class="row g-2">
+        <div class="col-md-6">
+          <label for="grouping_id">Grouping (Optional)</label>
+          <select id="grouping_id" name="grouping_id">
+            <option value="">No grouping</option>
+            {% for grouping in groupings %}
+              <option value="{{ grouping.id }}">{{ grouping.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="row g-2">
+        <div class="col-md-6">
+          <label for="accent_color">Card Accent Color</label>
+          <div class="color-choice-inline">
+            <span class="color-choice-text">Choose</span>
+            <input id="accent_color" class="color-picker-input" type="color" name="accent_color" value="#2d8f6f">
+          </div>
+        </div>
+      </div>
+
+      <label for="course_description">Description (Optional)</label>
+      <textarea id="course_description" name="course_description" rows="2" placeholder="What this course focuses on..."></textarea>
+
+      <button type="submit" class="btn btn-primary">Add Course</button>
+    </form>
+
+    <div class="course-grid grouping-list">
+      {% for course in courses %}
+        <article class="course-card grouping-item compact-category-card{% if course.is_completed %} course-completed{% endif %}">
+          <div class="course-content">
+            <h3>
+              <span class="color-dot" style="--dot-color: {{ course.accent_color or '#2d8f6f' }};"></span>
+              {{ course.name }}
+              <span class="priority-badge priority-{{ course.priority|lower }}">{{ course.priority }} Priority</span>
+              {% if course.is_completed %}<span class="course-done-badge">&#10003; Done</span>{% endif %}
+            </h3>
+            {% if course.course_code %}<p><strong>Code:</strong> {{ course.course_code }}</p>{% endif %}
+            {% if course.instructor_name %}<p><strong>Instructor:</strong> {{ course.instructor_name }}</p>{% endif %}
+            {% if course.grouping_name %}<p><strong>Grouping:</strong> {{ course.grouping_name }}</p>{% endif %}
+            {% if course.description %}<p>{{ course.description }}</p>{% endif %}
+            <p>{{ course.activity_count }} activities &middot; {{ course.completed_count }} done</p>
+            <div class="actions">
+              <form method="POST" action="/courses/{{ course.id }}/complete" style="display:inline">
+                {% if course.is_completed %}
+                  <button type="submit" class="btn-inline-link course-undo-btn">Undo Complete</button>
+                {% else %}
+                  <button type="submit" class="btn-inline-link course-complete-btn">&#10003; Complete</button>
+                {% endif %}
+              </form>
+              <a href="/courses/{{ course.id }}/edit">Edit</a>
+              <a href="/courses/{{ course.id }}/delete" onclick="return confirm('Delete this course and linked activities/quizzes?');">Delete</a>
+            </div>
+          </div>
+        </article>
+      {% else %}
+        <p class="empty">No courses yet. Add your first course.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel" id="journal">
+    <div class="section-head">
+      <h2 class="section-title"><span class="section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4h9a3 3 0 0 1 3 3v13H6z"></path><path d="M6 4v16"></path></svg></span>Journal</h2>
+      <p>Reflect daily with quick notes and mood tracking.</p>
+    </div>
+    <form method="POST" action="/journal/add" class="stack-form">
+      <label for="journal_title">Entry Title</label>
+      <input id="journal_title" type="text" name="journal_title" placeholder="Today's reflection" required>
+      <label for="journal_priority">Priority</label>
+      <select id="journal_priority" name="journal_priority" required>
+        <option value="Low">Low Priority</option>
+        <option value="Medium" selected>Medium Priority</option>
+        <option value="High">High Priority</option>
+      </select>
+      <label for="journal_content">Entry Content</label>
+      <textarea id="journal_content" name="journal_content" rows="4" required></textarea>
+      <label for="journal_mood">Mood</label>
+      <input id="journal_mood" type="text" name="journal_mood" placeholder="Focused, excited, tired...">
+      <button type="submit" class="btn btn-primary">Save Journal</button>
+    </form>
+    <div class="journal-list grouping-list">
+      {% for entry in journals %}
+        <article
+          class="journal-item grouping-item compact-category-card journal-trigger"
+          tabindex="0"
+          role="button"
+          aria-label="Open journal entry: {{ entry.title }}"
+          data-journal-title="{{ entry.title | e }}"
+          data-journal-content="{{ entry.content | e }}"
+          data-journal-date="{{ entry.entry_date | e }}"
+          data-journal-mood="{{ entry.mood | default('', true) | e }}"
+          data-journal-priority="{{ entry.priority | e }}"
+        >
+          <h3>{{ entry.title }} <span class="priority-badge priority-{{ entry.priority|lower }}">{{ entry.priority }} Priority</span></h3>
+          <p class="journal-preview">{{ entry.content }}</p>
+          <div class="journal-meta">{{ entry.entry_date }} {% if entry.mood %} | {{ entry.mood }}{% endif %}</div>
+        </article>
+      {% else %}
+        <p class="empty">No journal entries yet.</p>
+      {% endfor %}
+    </div>
+
+    <div class="modal fade journal-modal" id="journalEntryModal" tabindex="-1" aria-labelledby="journalModalTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div class="journal-modal-title-wrap">
+              <h5 class="modal-title" id="journalModalTitle">Journal Entry</h5>
+              <span class="priority-badge priority-medium" data-journal-modal-priority>Medium Priority</span>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="journal-modal-meta" data-journal-modal-meta></p>
+            <p class="journal-modal-content" data-journal-modal-content></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="activities">
+    <div class="section-head">
+      <h2 class="section-title"><span class="section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h13"></path><path d="M8 12h13"></path><path d="M8 17h13"></path><path d="M3 7h.01M3 12h.01M3 17h.01"></path></svg></span>Activity Planner</h2>
+      <p>Build each activity with timer and due date. Rewards are automatic (+100 on completion).</p>
+    </div>
+    <form method="POST" action="/activities/add" class="stack-form">
+      <div class="row g-2">
+        <div class="col-md-6 col-lg-3">
+          <label for="activity_grouping_id">Grouping (Optional)</label>
+          <select id="activity_grouping_id" name="activity_grouping_id">
+            <option value="">All Groupings</option>
+            {% for grouping in groupings %}
+              <option value="{{ grouping.id }}">{{ grouping.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <label for="activity_type">Category</label>
+          <select id="activity_type" name="activity_type" required>
+            <option value="Task">Task</option>
+            <option value="Exam">Exam</option>
+            <option value="Quiz">Quiz</option>
+            <option value="Project">Project</option>
+            <option value="Assignment">Assignment</option>
+          </select>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <label for="student_status">Status</label>
+          <select id="student_status" name="student_status" required>
+            <option value="Not Started">Not Started</option>
+            <option value="In Progress">In Progress</option>
+            <option value="On Hold">On Hold</option>
+            <option value="Reviewing">Reviewing</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <label for="activity_priority">Priority</label>
+          <select id="activity_priority" name="activity_priority" required>
+            <option value="Low">Low Priority</option>
+            <option value="Medium" selected>Medium Priority</option>
+            <option value="High">High Priority</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row g-2">
+        <div class="col-md-6">
+          <label for="course_id">Choose Existing Course</label>
+          <select id="course_id" name="course_id">
+            <option value="">Select a course</option>
+            {% for course in courses %}
+              <option value="{{ course.id }}" data-grouping-id="{{ course.grouping_id if course.grouping_id else '' }}">{{ course.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label for="new_course_name">Or Create New Course</label>
+          <input id="new_course_name" type="text" name="new_course_name" placeholder="New course name">
+        </div>
+      </div>
+
+      <label for="title">Activity Title</label>
+      <input id="title" type="text" name="title" placeholder="Project, quiz prep, report..." required>
+
+      <label for="details">Activity Details</label>
+      <textarea id="details" name="details" rows="3" placeholder="What exactly do you need to do?"></textarea>
+
+      <div class="row g-2">
+        <div class="col-md-6 col-lg-3">
+          <label for="scheduled_at">Real-Time Schedule</label>
+          <input id="scheduled_at" type="datetime-local" name="scheduled_at">
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <label for="due_at">Due Date and Time</label>
+          <input id="due_at" type="datetime-local" name="due_at" required>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <label for="time_minutes">Focus Time (minutes)</label>
+          <input id="time_minutes" type="number" name="time_minutes" min="5" max="600" value="30" required>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save Activity</button>
+    </form>
+
+    <div class="assignment-cards grouping-list">
+      {% for activity in activities %}
+        <article class="assignment-card activity-summary-card grouping-item compact-category-card">
+          <header>
+            <h3>{{ activity.title }} <span class="priority-badge priority-{{ activity.priority|lower }}">{{ activity.priority }} Priority</span></h3>
+          </header>
+          <p class="meta-line"><strong>Course:</strong> {{ activity.course_name }}</p>
+          <p class="meta-line"><strong>Status:</strong> {{ activity.student_status }}</p>
+          <p class="meta-line"><strong>Due:</strong> {{ activity.due_at }}</p>
+          <div class="actions">
+            <a href="/activities/{{ activity.id }}/edit">Edit</a>
+            <a href="/activities/{{ activity.id }}/complete">Complete</a>
+            <a href="/activities/{{ activity.id }}/delete" onclick="return confirm('Delete this activity?');">Delete</a>
+          </div>
+        </article>
+      {% else %}
+        <p class="empty">No activities yet. Add your first activity.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel" id="quizzes">
+    <div class="section-head">
+      <h2 class="section-title"><span class="section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 1 1 4.3 1.7c-.9.8-1.3 1.2-1.3 2.3"></path><path d="M12 17h.01"></path></svg></span>Quizzes</h2>
+      <p>Create your own timed quizzes and open any saved set.</p>
+    </div>
+    <div class="quiz-create-actions">
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createQuizModal">Create Quiz</button>
+      <p class="hint">Use pop-up form to create a new quiz set.</p>
+    </div>
+
+    <div class="modal fade" id="createQuizModal" tabindex="-1" aria-labelledby="createQuizModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="createQuizModalLabel">Create New Quiz</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form method="POST" action="/quizzes/create" class="stack-form" data-quiz-builder-form>
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <label for="quiz_title">Quiz Title</label>
+                  <input id="quiz_title" type="text" name="quiz_title" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="quiz_course_id">Course</label>
+                  <select id="quiz_course_id" name="quiz_course_id" required>
+                    <option value="">Select</option>
+                    {% for course in courses %}
+                      <option value="{{ course.id }}">{{ course.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="row g-2">
+                <div class="col-md-4">
+                  <label for="quiz_status">Status</label>
+                  <select id="quiz_status" name="quiz_status" required>
+                    <option value="Not Started">Not Started</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="On Hold">On Hold</option>
+                    <option value="Reviewing">Reviewing</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label for="quiz_scheduled_at">Real-Time Schedule</label>
+                  <input id="quiz_scheduled_at" type="datetime-local" name="quiz_scheduled_at">
+                </div>
+                <div class="col-md-4">
+                  <label for="quiz_priority">Priority</label>
+                  <select id="quiz_priority" name="quiz_priority" required>
+                    <option value="Low">Low Priority</option>
+                    <option value="Medium" selected>Medium Priority</option>
+                    <option value="High">High Priority</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <label for="quiz_time_limit">Time Limit (minutes)</label>
+                  <input id="quiz_time_limit" type="number" name="quiz_time_limit" min="1" max="180" value="10" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="quiz_question_count">How Many Questions?</label>
+                  <select id="quiz_question_count" name="quiz_question_count" data-quiz-question-count>
+                    {% for question_number in range(1, max_quiz_questions + 1) %}
+                      <option value="{{ question_number }}" {% if question_number == 3 %}selected{% endif %}>{{ question_number }} question{{ 's' if question_number != 1 else '' }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="quiz-builder-head">
+                <h3 class="subheading">Questions</h3>
+                <p>Create all questions here before saving the quiz.</p>
+              </div>
+              <div class="quiz-builder-list" data-quiz-questions-container data-max-questions="{{ max_quiz_questions }}"></div>
+              <div class="d-flex gap-2 mt-3">
+                <button type="button" class="btn" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Quiz</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="quiz-list grouping-list">
+      {% for quiz in quiz_sets %}
+        <article class="quiz-item grouping-item compact-category-card">
+          <h3>{{ quiz.title }} <span class="priority-badge priority-{{ quiz.priority|lower }}">{{ quiz.priority }} Priority</span></h3>
+          <p>{{ quiz.course_name }} | {{ quiz.question_count }} questions | {{ quiz.time_limit_minutes }} mins</p>
+          <p><strong>Status:</strong> {{ 'Completed' if (quiz.attempt_count or 0) > 0 else quiz.quiz_status }}{% if quiz.scheduled_at %} | <strong>Real-Time:</strong> {{ quiz.scheduled_at }}{% endif %}</p>
+          {% if quiz.last_score is not none %}
+            <p>Last score: {{ quiz.last_score }}/{{ quiz.last_total }} ({{ quiz.last_attempt_at }})</p>
+          {% endif %}
+          <div class="actions">
+            {% if (quiz.attempt_count or 0) > 0 %}
+              <span class="status status-completed">Locked after submission</span>
+            {% else %}
+              <a href="/quizzes/{{ quiz.id }}/take">Open Quiz</a>
+            {% endif %}
+          </div>
+        </article>
+      {% else %}
+        <p class="empty">No quizzes yet.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel account-panel" id="account">
+    <div class="account-head">
+      <h2 class="section-title"><span class="section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c1.8-3.5 5-5 8-5s6.2 1.5 8 5"></path></svg></span>Account</h2>
+      <div class="profile-avatar-large">
+        {% if profile and profile.photo_path %}
+          <img src="{{ url_for('static', filename=profile.photo_path) }}" alt="Student profile photo">
+        {% else %}
+          <span>{{ session.get('email')[0]|upper }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <p class="account-email">{{ session.get('email') }}</p>
+    {% if profile %}
+      <div class="profile-mini-card">
+        <p><strong>Nickname:</strong> {{ profile.nickname }}</p>
+        <p><strong>Age:</strong> {{ profile.age }}</p>
+        <p><strong>Hobby:</strong> {{ profile.hobby }}</p>
+        <a class="btn" href="/profile/setup">Edit Profile</a>
+      </div>
+    {% else %}
+      <a class="btn" href="/profile/setup">Complete Profile</a>
+    {% endif %}
+    <div class="progress-box">
+      <p>Completed Activities</p>
+      <strong>{{ completed_count }}</strong>
+    </div>
+    <div class="progress-box">
+      <p>Pending Activities</p>
+      <strong>{{ pending_count }}</strong>
+    </div>
+    <div class="progress-box points-box">
+      <p>Total Points Earned</p>
+      <strong>{{ total_points }}</strong>
+    </div>
+    <p class="hint">Completing activities, courses, and quizzes increases your points streak.</p>
+  </section>
+</section>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="panel form-panel">
+  <h1>Edit Activity</h1>
+  <p>Refine your plan, due date, and timer. Rewards are automatic (+100 on completion).</p>
+
+  <form method="POST" class="stack-form">
+    <div class="two-col">
+      <div>
+        <label for="activity_type">Category</label>
+        <select id="activity_type" name="activity_type" required>
+          <option value="Task" {% if activity.activity_type == 'Task' %}selected{% endif %}>Task</option>
+          <option value="Exam" {% if activity.activity_type == 'Exam' %}selected{% endif %}>Exam</option>
+          <option value="Quiz" {% if activity.activity_type == 'Quiz' %}selected{% endif %}>Quiz</option>
+          <option value="Project" {% if activity.activity_type == 'Project' %}selected{% endif %}>Project</option>
+          <option value="Assignment" {% if activity.activity_type == 'Assignment' %}selected{% endif %}>Assignment</option>
+        </select>
+      </div>
+      <div>
+        <label for="student_status">Status</label>
+        <select id="student_status" name="student_status" required>
+          <option value="Not Started" {% if activity.student_status == 'Not Started' %}selected{% endif %}>Not Started</option>
+          <option value="In Progress" {% if activity.student_status == 'In Progress' %}selected{% endif %}>In Progress</option>
+          <option value="On Hold" {% if activity.student_status == 'On Hold' %}selected{% endif %}>On Hold</option>
+          <option value="Reviewing" {% if activity.student_status == 'Reviewing' %}selected{% endif %}>Reviewing</option>
+          <option value="Completed" {% if activity.student_status == 'Completed' %}selected{% endif %}>Completed</option>
+        </select>
+      </div>
+      <div>
+        <label for="activity_priority">Priority</label>
+        <select id="activity_priority" name="activity_priority" required>
+          <option value="Low" {% if activity.priority == 'Low' %}selected{% endif %}>Low Priority</option>
+          <option value="Medium" {% if activity.priority == 'Medium' %}selected{% endif %}>Medium Priority</option>
+          <option value="High" {% if activity.priority == 'High' %}selected{% endif %}>High Priority</option>
+        </select>
+      </div>
+    </div>
+
+    <label for="course_id">Course</label>
+    <select id="course_id" name="course_id" required>
+      {% for course in courses %}
+        <option value="{{ course.id }}" {% if course.id == activity.course_id %}selected{% endif %}>{{ course.name }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="title">Activity Title</label>
+    <input id="title" type="text" name="title" value="{{ activity.title }}" required>
+
+    <label for="details">Details</label>
+    <textarea id="details" name="details" rows="4">{{ activity.details }}</textarea>
+
+    <div class="three-col">
+      <div>
+        <label for="scheduled_at">Real-Time Schedule</label>
+        <input id="scheduled_at" type="datetime-local" name="scheduled_at" value="{{ activity.scheduled_at.strftime('%Y-%m-%dT%H:%M') if activity.scheduled_at else '' }}">
+      </div>
+      <div>
+        <label for="due_at">Due Date and Time</label>
+        <input id="due_at" type="datetime-local" name="due_at" value="{{ activity.due_at.strftime('%Y-%m-%dT%H:%M') if activity.due_at else '' }}" required>
+      </div>
+      <div>
+        <label for="time_minutes">Focus Time (minutes)</label>
+        <input id="time_minutes" type="number" name="time_minutes" min="5" max="600" value="{{ activity.time_minutes }}" required>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <a class="btn" href="/dashboard#activities">Cancel</a>
+  </form>
+
+  {% if error %}
+    <p class="error-text">{{ error }}</p>
+  {% endif %}
+</section>
+{% endblock %}

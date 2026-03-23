@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-wrap">
+	<article class="auth-panel error-panel card border-0 shadow-sm">
+		<h1>System Error</h1>
+		<p class="auth-subtitle">We could not complete your request right now.</p>
+
+		<div class="error-banner" role="alert">
+			<strong>Details:</strong>
+			<span>{{ message }}</span>
+		</div>
+
+		<p class="error-hint">Check that MySQL is running and the database credentials are correct, then try again.</p>
+
+		<div class="error-actions">
+			<a href="/" class="btn btn-primary">Try Again</a>
+			<a href="/login" class="google-signup-link">Go to Login</a>
+		</div>
+	</article>
+</section>
+{% endblock %}

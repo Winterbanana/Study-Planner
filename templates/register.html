@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-wrap">
+  <article class="auth-panel card border-0 shadow-sm">
+    <h1>Create your Account</h1>
+    <p class="auth-subtitle">Register with your Gmail account and start organizing classes, tasks, and quizzes in one place.</p>
+
+    <form method="POST" class="stack-form auth-form">
+      <label class="form-label" for="email">Email</label>
+      <input class="form-control" id="email" type="email" name="email" placeholder="you@gmail.com" required>
+
+      <label class="form-label" for="password">Password</label>
+      <input class="form-control" id="password" type="password" name="password" minlength="6" required>
+
+      <label class="form-label" for="confirm_password">Confirm Password</label>
+      <input class="form-control" id="confirm_password" type="password" name="confirm_password" minlength="6" required>
+
+      <button type="submit" class="btn btn-primary w-100">Create Account</button>
+
+      <button type="submit" class="google-signup-btn" aria-label="Sign Up using Google Account">
+        <span class="google-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="20" height="20">
+            <path fill="#FFC107" d="M43.61 20.08H42V20H24v8h11.3C33.65 32.66 29.22 36 24 36c-6.63 0-12-5.37-12-12s5.37-12 12-12c3.06 0 5.84 1.15 7.96 3.04l5.66-5.66C34.05 6.05 29.27 4 24 4 12.95 4 4 12.95 4 24s8.95 20 20 20 20-8.95 20-20c0-1.34-.14-2.65-.39-3.92z"/>
+            <path fill="#FF3D00" d="M6.31 14.69l6.57 4.82C14.65 16.11 18.96 13 24 13c3.06 0 5.84 1.15 7.96 3.04l5.66-5.66C34.05 6.05 29.27 4 24 4 16.32 4 9.66 8.34 6.31 14.69z"/>
+            <path fill="#4CAF50" d="M24 44c5.17 0 9.86-1.98 13.41-5.19l-6.19-5.24C29.14 35.09 26.72 36 24 36c-5.2 0-9.62-3.32-11.28-7.95l-6.52 5.03C9.51 39.56 16.23 44 24 44z"/>
+            <path fill="#1976D2" d="M43.61 20.08H42V20H24v8h11.3a12 12 0 0 1-6.08 7.57l6.19 5.24C35.07 41.11 44 34.5 44 24c0-1.34-.14-2.65-.39-3.92z"/>
+          </svg>
+        </span>
+        <span>Sign Up using Google Account</span>
+      </button>
+    </form>
+
+    {% if error %}
+      <p class="error-text alert alert-danger py-2 px-3 mb-2" role="alert">{{ error }}</p>
+    {% endif %}
+
+    <div class="auth-divider"></div>
+
+    <p class="auth-footnote">Already have an account? <a href="/login">Sign in</a></p>
+  </article>
+</section>
+{% endblock %}
